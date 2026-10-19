@@ -1,0 +1,4 @@
+domain_path: C:\FPGA_Proj\ANZVP1202SOM\workspace\anzvp1202_platform\export\anzvp1202_platform\sw\standalone_domain
+app_src_dir: C:\Xilinx\Vitis\2024.2\data\embeddedsw\lib\sw_apps\lwip_tcp_perf_server
+template: lwip_tcp_perf_server
+lang: c
