@@ -25,6 +25,35 @@ set FPGA_PART "xcvp1202-vsva2785-1MP-i-S"
 set SCRIPT_DIR [file normalize [file dirname [info script]]]
 set ROOT_DIR   [file normalize "$SCRIPT_DIR/.."]
 
+# Windows: map ROOT_DIR to a short drive letter (subst) to avoid MAX_PATH
+# (260 chars) failures in the Versal PLM/BSP build (mb-gcc)
+#######################################################################
+
+set SUBST_DRIVE "V:"
+
+if {$tcl_platform(platform) eq "windows" && \
+    ![string equal -nocase [string range $ROOT_DIR 0 1] $SUBST_DRIVE]} {
+
+    set mapped ""
+
+    foreach line [split [exec subst] "\n"] {
+        regexp -nocase "^${SUBST_DRIVE}\\\\: => (.+)$" \
+            [string trim $line] -> mapped
+    }
+
+    if {$mapped eq ""} {
+        exec subst $SUBST_DRIVE [file nativename $ROOT_DIR]
+        puts "Mapped $SUBST_DRIVE => $ROOT_DIR"
+    } elseif {![string equal -nocase \
+        [file normalize $mapped] $ROOT_DIR]} {
+        error "$SUBST_DRIVE is already mapped to '$mapped'. \
+Run 'subst $SUBST_DRIVE /D' or change SUBST_DRIVE."
+    }
+
+    set ROOT_DIR [file normalize "$SUBST_DRIVE/"]
+}
+
+
 set PROJECT_DIR    [file normalize "$ROOT_DIR/build/$PROJECT_NAME"]
 set HDL_DIR        [file normalize "$ROOT_DIR/hdl"]
 set CONSTRAINT_DIR [file normalize "$ROOT_DIR/constrains"]

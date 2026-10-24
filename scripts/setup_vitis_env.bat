@@ -4,7 +4,7 @@ echo ============================================
 echo Loading AMD Vitis Environment
 echo ============================================
 
-call C:\Xilinx\Vitis\2024.2\settings64.bat
+call C:\AMDDesignTools\2025.2\Vitis\settings64.bat
 
 echo.
 echo ============================================

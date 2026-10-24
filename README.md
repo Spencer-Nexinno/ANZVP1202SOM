@@ -63,7 +63,7 @@ vivado -mode batch -source ./scripts/build_it.tcl
 ## Create Vitis Platform
 The platform is generated automatically from:
 
-release/hardware/ANZVP1202SOM_top.xsa
+release/hardware/ANZVP1202SOM_01.xsa
 
 ```python
 vitis -s scripts\create_vitis_platform.py > build.log
