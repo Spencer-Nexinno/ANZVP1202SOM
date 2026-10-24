@@ -16,7 +16,7 @@ set PROJECT_NAME "${BASE_PROJECT_NAME}_${VERSION}"
 # Device
 ###############################################################################
 
-set FPGA_PART "xcvp1202-vsva2785-1MP-e-S"
+set FPGA_PART "xcvp1202-vsva2785-1MP-i-S"
 
 ###############################################################################
 # Directory Structure

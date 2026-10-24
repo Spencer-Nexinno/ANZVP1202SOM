@@ -11,8 +11,10 @@
 `timescale 1 ps / 1 ps
 
 module ANZVP1202SOM_top
-   (Bank106_GT_REFCLK_clk_n,
+     (Bank106_GT_REFCLK_clk_n,
     Bank106_GT_REFCLK_clk_p,
+    Bank200_GT_REFCLK_clk_n,
+    Bank200_GT_REFCLK_clk_p,
     LPDDR4_CLK1_clk_n,
     LPDDR4_CLK1_clk_p,
     LPDDR4_CLK2_clk_n,
@@ -139,9 +141,15 @@ module ANZVP1202SOM_top
     bank106_GT_Serial_grx_n,
     bank106_GT_Serial_grx_p,
     bank106_GT_Serial_gtx_n,
-    bank106_GT_Serial_gtx_p);
+    bank106_GT_Serial_gtx_p,
+    bank200_GT_Serial_grx_n,
+    bank200_GT_Serial_grx_p,
+    bank200_GT_Serial_gtx_n,
+    bank200_GT_Serial_gtx_p);
   input [0:0]Bank106_GT_REFCLK_clk_n;
   input [0:0]Bank106_GT_REFCLK_clk_p;
+  input [0:0]Bank200_GT_REFCLK_clk_n;
+  input [0:0]Bank200_GT_REFCLK_clk_p;
   input [0:0]LPDDR4_CLK1_clk_n;
   input [0:0]LPDDR4_CLK1_clk_p;
   input [0:0]LPDDR4_CLK2_clk_n;
@@ -269,9 +277,15 @@ module ANZVP1202SOM_top
   input [3:0]bank106_GT_Serial_grx_p;
   output [3:0]bank106_GT_Serial_gtx_n;
   output [3:0]bank106_GT_Serial_gtx_p;
+  input [3:0]bank200_GT_Serial_grx_n;
+  input [3:0]bank200_GT_Serial_grx_p;
+  output [3:0]bank200_GT_Serial_gtx_n;
+  output [3:0]bank200_GT_Serial_gtx_p;
 
   wire [0:0]Bank106_GT_REFCLK_clk_n;
   wire [0:0]Bank106_GT_REFCLK_clk_p;
+  wire [0:0]Bank200_GT_REFCLK_clk_n;
+  wire [0:0]Bank200_GT_REFCLK_clk_p;
   wire [0:0]LPDDR4_CLK1_clk_n;
   wire [0:0]LPDDR4_CLK1_clk_p;
   wire [0:0]LPDDR4_CLK2_clk_n;
@@ -414,6 +428,10 @@ module ANZVP1202SOM_top
   wire [3:0]bank106_GT_Serial_grx_p;
   wire [3:0]bank106_GT_Serial_gtx_n;
   wire [3:0]bank106_GT_Serial_gtx_p;
+  wire [3:0]bank200_GT_Serial_grx_n;
+  wire [3:0]bank200_GT_Serial_grx_p;
+  wire [3:0]bank200_GT_Serial_gtx_n;
+  wire [3:0]bank200_GT_Serial_gtx_p;
 
   IOBUF PL_GPIO_tri_iobuf_0
        (.I(PL_GPIO_tri_o_0),
@@ -438,6 +456,8 @@ module ANZVP1202SOM_top
   bd_system bd_system_i
        (.Bank106_GT_REFCLK_clk_n(Bank106_GT_REFCLK_clk_n),
         .Bank106_GT_REFCLK_clk_p(Bank106_GT_REFCLK_clk_p),
+        .Bank200_GT_REFCLK_clk_n(Bank200_GT_REFCLK_clk_n),
+        .Bank200_GT_REFCLK_clk_p(Bank200_GT_REFCLK_clk_p),
         .LPDDR4_CLK1_clk_n(LPDDR4_CLK1_clk_n),
         .LPDDR4_CLK1_clk_p(LPDDR4_CLK1_clk_p),
         .LPDDR4_CLK2_clk_n(LPDDR4_CLK2_clk_n),
@@ -566,5 +586,10 @@ module ANZVP1202SOM_top
         .bank106_GT_Serial_grx_n(bank106_GT_Serial_grx_n),
         .bank106_GT_Serial_grx_p(bank106_GT_Serial_grx_p),
         .bank106_GT_Serial_gtx_n(bank106_GT_Serial_gtx_n),
-        .bank106_GT_Serial_gtx_p(bank106_GT_Serial_gtx_p));
+        .bank106_GT_Serial_gtx_p(bank106_GT_Serial_gtx_p),
+        .bank200_GT_Serial_grx_n(bank200_GT_Serial_grx_n),
+        .bank200_GT_Serial_grx_p(bank200_GT_Serial_grx_p),
+        .bank200_GT_Serial_gtx_n(bank200_GT_Serial_gtx_n),
+        .bank200_GT_Serial_gtx_p(bank200_GT_Serial_gtx_p));
 endmodule
+

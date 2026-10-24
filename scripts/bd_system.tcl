@@ -49,7 +49,7 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 
 set list_projs [get_projects -quiet]
 if { $list_projs eq "" } {
-   create_project project_1 myproj -part xcvp1202-vsva2785-1MP-e-S
+   create_project project_1 myproj -part xcvp1202-vsva2785-1MP-i-S
 }
 
 
@@ -169,13 +169,13 @@ if { $bCheckIPsPassed != 1 } {
 ##################################################################
 
 
-# Hierarchical cell: Serdes
-proc create_hier_cell_Serdes { parentCell nameHier } {
+# Hierarchical cell: Serdes2
+proc create_hier_cell_Serdes2 { parentCell nameHier } {
 
   variable script_folder
 
   if { $parentCell eq "" || $nameHier eq "" } {
-     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_Serdes() - Empty argument(s)!"}
+     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_Serdes2() - Empty argument(s)!"}
      return
   }
 
@@ -221,7 +221,7 @@ proc create_hier_cell_Serdes { parentCell nameHier } {
     CONFIG.CHANNEL_ORDERING {} \
     CONFIG.PORTS_INFO_DICT {LANE_SEL_DICT {PROT0 {RX0 RX1 RX2 RX3 TX0 TX1 TX2 TX3}} GT_TYPE GTYP REG_CONF_INTF AXI_LITE BOARD_PARAMETER { }} \
     CONFIG.PROT0_PRESET {GTYP-Ethernet_25G_RAW} \
-    CONFIG.REFCLK_LIST {{/Bank106_GT_REFCLK_clk_p[0]}} \
+    CONFIG.REFCLK_LIST {{/Bank200_GT_REFCLK_clk_p[0]}} \
     CONFIG.REFCLK_STRING {HSCLK0_LCPLLGTREFCLK0 refclk_PROT0_R0_156.25_MHz_unique1 HSCLK1_LCPLLGTREFCLK0 refclk_PROT0_R0_156.25_MHz_unique1} \
     CONFIG.REG_CONF_INTF {AXI_LITE} \
   ] $gt_quad_base_0
@@ -248,6 +248,110 @@ proc create_hier_cell_Serdes { parentCell nameHier } {
   connect_bd_intf_net -intf_net Conn1 [get_bd_intf_pins gt_quad_base_0/AXI_LITE] [get_bd_intf_pins AXI_LITE]
   connect_bd_intf_net -intf_net Conn2 [get_bd_intf_pins gt_quad_base_0/GT_Serial] [get_bd_intf_pins bank106_GT_Serial]
   connect_bd_intf_net -intf_net Conn3 [get_bd_intf_pins util_ds_buf_0/CLK_IN_D] [get_bd_intf_pins Bank106_GT_REFCLK]
+
+  # Create port connections
+  connect_bd_net -net bufg_gt_0_usrclk  [get_bd_pins bank106_tx_bufg_gt/usrclk] \
+  [get_bd_pins gt_quad_base_0/ch0_txusrclk] \
+  [get_bd_pins gt_quad_base_0/ch1_txusrclk] \
+  [get_bd_pins gt_quad_base_0/ch2_txusrclk] \
+  [get_bd_pins gt_quad_base_0/ch3_txusrclk]
+  connect_bd_net -net bufg_gt_0_usrclk1  [get_bd_pins bank106_rx_bufg_gt/usrclk] \
+  [get_bd_pins gt_quad_base_0/ch0_rxusrclk] \
+  [get_bd_pins gt_quad_base_0/ch1_rxusrclk] \
+  [get_bd_pins gt_quad_base_0/ch2_rxusrclk] \
+  [get_bd_pins gt_quad_base_0/ch3_rxusrclk]
+  connect_bd_net -net gt_quad_base_0_ch0_rxoutclk  [get_bd_pins gt_quad_base_0/ch0_rxoutclk] \
+  [get_bd_pins bank106_rx_bufg_gt/outclk]
+  connect_bd_net -net gt_quad_base_0_ch0_txoutclk  [get_bd_pins gt_quad_base_0/ch0_txoutclk] \
+  [get_bd_pins bank106_tx_bufg_gt/outclk]
+  connect_bd_net -net s_axi_lite_clk_1  [get_bd_pins s_axi_lite_clk] \
+  [get_bd_pins gt_quad_base_0/s_axi_lite_clk]
+  connect_bd_net -net util_ds_buf_0_IBUF_OUT  [get_bd_pins util_ds_buf_0/IBUF_OUT] \
+  [get_bd_pins gt_quad_base_0/GT_REFCLK0]
+
+  # Restore current instance
+  current_bd_instance $oldCurInst
+}
+
+# Hierarchical cell: Serdes1
+proc create_hier_cell_Serdes1 { parentCell nameHier } {
+
+  variable script_folder
+
+  if { $parentCell eq "" || $nameHier eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_Serdes1() - Empty argument(s)!"}
+     return
+  }
+
+  # Get object for parentCell
+  set parentObj [get_bd_cells $parentCell]
+  if { $parentObj == "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2090 -severity "ERROR" "Unable to find parent cell <$parentCell>!"}
+     return
+  }
+
+  # Make sure parentObj is hier blk
+  set parentType [get_property TYPE $parentObj]
+  if { $parentType ne "hier" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2091 -severity "ERROR" "Parent <$parentObj> has TYPE = <$parentType>. Expected to be <hier>."}
+     return
+  }
+
+  # Save current instance; Restore later
+  set oldCurInst [current_bd_instance .]
+
+  # Set parent object as current
+  current_bd_instance $parentObj
+
+  # Create cell and set as current instance
+  set hier_obj [create_bd_cell -type hier $nameHier]
+  current_bd_instance $hier_obj
+
+  # Create interface pins
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 AXI_LITE
+
+  create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:gt_rtl:1.0 bank_GTY_Serial
+
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 Bank_GTY_REFCLK
+
+
+  # Create pins
+  create_bd_pin -dir I -type clk s_axi_lite_clk
+
+  # Create instance: gt_quad_base_0, and set properties
+  set gt_quad_base_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:gt_quad_base:1.1 gt_quad_base_0 ]
+  set_property -dict [list \
+    CONFIG.APB3_CLK_FREQUENCY {156.248437} \
+    CONFIG.CHANNEL_ORDERING {} \
+    CONFIG.PORTS_INFO_DICT {LANE_SEL_DICT {PROT0 {RX0 RX1 RX2 RX3 TX0 TX1 TX2 TX3}} GT_TYPE GTYP REG_CONF_INTF AXI_LITE BOARD_PARAMETER { }} \
+    CONFIG.PROT0_PRESET {GTYP-Ethernet_25G_RAW} \
+    CONFIG.REFCLK_LIST {{/Bank106_GT_REFCLK_clk_p[0]}} \
+    CONFIG.REFCLK_STRING {HSCLK0_LCPLLGTREFCLK0 refclk_PROT0_R0_156.25_MHz_unique1 HSCLK1_LCPLLGTREFCLK0 refclk_PROT0_R0_156.25_MHz_unique1} \
+    CONFIG.REG_CONF_INTF {AXI_LITE} \
+  ] $gt_quad_base_0
+
+  set_property -dict [list \
+    CONFIG.APB3_CLK_FREQUENCY.VALUE_MODE {auto} \
+    CONFIG.CHANNEL_ORDERING.VALUE_MODE {auto} \
+    CONFIG.REFCLK_LIST.VALUE_MODE {auto} \
+  ] $gt_quad_base_0
+
+
+  # Create instance: bank106_tx_bufg_gt, and set properties
+  set bank106_tx_bufg_gt [ create_bd_cell -type ip -vlnv xilinx.com:ip:bufg_gt:1.0 bank106_tx_bufg_gt ]
+
+  # Create instance: bank106_rx_bufg_gt, and set properties
+  set bank106_rx_bufg_gt [ create_bd_cell -type ip -vlnv xilinx.com:ip:bufg_gt:1.0 bank106_rx_bufg_gt ]
+
+  # Create instance: util_ds_buf_0, and set properties
+  set util_ds_buf_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf:2.2 util_ds_buf_0 ]
+  set_property CONFIG.C_BUF_TYPE {IBUFDSGTE} $util_ds_buf_0
+
+
+  # Create interface connections
+  connect_bd_intf_net -intf_net Conn1 [get_bd_intf_pins gt_quad_base_0/AXI_LITE] [get_bd_intf_pins AXI_LITE]
+  connect_bd_intf_net -intf_net Conn2 [get_bd_intf_pins gt_quad_base_0/GT_Serial] [get_bd_intf_pins bank_GTY_Serial]
+  connect_bd_intf_net -intf_net Conn3 [get_bd_intf_pins util_ds_buf_0/CLK_IN_D] [get_bd_intf_pins Bank_GTY_REFCLK]
 
   # Create port connections
   connect_bd_net -net bufg_gt_0_usrclk  [get_bd_pins bank106_tx_bufg_gt/usrclk] \
@@ -342,6 +446,10 @@ proc create_root_design { parentCell } {
 
   set Bank106_GT_REFCLK [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 Bank106_GT_REFCLK ]
 
+  set bank200_GT_Serial [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gt_rtl:1.0 bank200_GT_Serial ]
+
+  set Bank200_GT_REFCLK [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 Bank200_GT_REFCLK ]
+
 
   # Create ports
 
@@ -350,7 +458,7 @@ proc create_root_design { parentCell } {
   set_property -dict [list \
     CONFIG.BOOT_MODE {Custom} \
     CONFIG.CLOCK_MODE {Custom} \
-    CONFIG.DDR_MEMORY_MODE {Enable} \
+    CONFIG.DDR_MEMORY_MODE {Custom} \
     CONFIG.DEBUG_MODE {JTAG} \
     CONFIG.DESIGN_MODE {1} \
     CONFIG.IO_CONFIG_MODE {Custom} \
@@ -482,7 +590,7 @@ proc create_root_design { parentCell } {
       PMC_CRP_PPLL_CTRL_FBDIV {72} \
       PMC_CRP_PPLL_CTRL_SRCSEL {REF_CLK} \
       PMC_CRP_PPLL_TO_XPD_CTRL_DIVISOR0 {1} \
-      PMC_CRP_QSPI_REF_CTRL_ACT_FREQMHZ {300} \
+      PMC_CRP_QSPI_REF_CTRL_ACT_FREQMHZ {299.997009} \
       PMC_CRP_QSPI_REF_CTRL_DIVISOR0 {4} \
       PMC_CRP_QSPI_REF_CTRL_FREQMHZ {300} \
       PMC_CRP_QSPI_REF_CTRL_SRCSEL {PPLL} \
@@ -535,11 +643,11 @@ proc create_root_design { parentCell } {
       PMC_HSM1_CLK_ENABLE {1} \
       PMC_HSM1_CLK_OUT_ENABLE {0} \
       PMC_I2CPMC_PERIPHERAL {{ENABLE 0} {IO {PMC_MIO 2 .. 3}}} \
-      PMC_MIO0 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO1 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO10 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO11 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO12 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
+      PMC_MIO0 {{AUX_IO 0} {DIRECTION out} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
+      PMC_MIO1 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
+      PMC_MIO10 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
+      PMC_MIO11 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
+      PMC_MIO12 {{AUX_IO 0} {DIRECTION out} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO13 {{AUX_IO 0} {DIRECTION out} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO14 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO15 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
@@ -547,7 +655,7 @@ proc create_root_design { parentCell } {
       PMC_MIO17 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO18 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO19 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
-      PMC_MIO2 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
+      PMC_MIO2 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO20 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO21 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO22 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
@@ -558,7 +666,7 @@ proc create_root_design { parentCell } {
       PMC_MIO27 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO28 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
       PMC_MIO29 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
-      PMC_MIO3 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
+      PMC_MIO3 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO30 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO31 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO32 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
@@ -569,7 +677,7 @@ proc create_root_design { parentCell } {
       PMC_MIO37 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
       PMC_MIO38 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
       PMC_MIO39 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO4 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
+      PMC_MIO4 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO40 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
       PMC_MIO41 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
       PMC_MIO42 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
@@ -580,17 +688,17 @@ proc create_root_design { parentCell } {
       PMC_MIO47 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO48 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
       PMC_MIO49 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO5 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
+      PMC_MIO5 {{AUX_IO 0} {DIRECTION out} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO50 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
       PMC_MIO51 {{AUX_IO 0} {DIRECTION out} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO6 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO7 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO8 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
-      PMC_MIO9 {{AUX_IO 0} {DIRECTION in} {DRIVE_STRENGTH 8mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 0} {SLEW slow} {USAGE Unassigned}} \
+      PMC_MIO7 {{AUX_IO 0} {DIRECTION out} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
+      PMC_MIO8 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
+      PMC_MIO9 {{AUX_IO 0} {DIRECTION inout} {DRIVE_STRENGTH 12mA} {OUTPUT_DATA default} {PULL pullup} {SCHMITT 1} {SLEW slow} {USAGE Reserved}} \
       PMC_MIO_EN_FOR_PL_PCIE {0} \
-      PMC_MIO_TREE_PERIPHERALS {#############USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#SD1/eMMC1#SD1/eMMC1##SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1######UART\
+      PMC_MIO_TREE_PERIPHERALS {QSPI#QSPI#QSPI#QSPI#QSPI#QSPI##QSPI#QSPI#QSPI#QSPI#QSPI#QSPI#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#USB 2.0#SD1/eMMC1#SD1/eMMC1##SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1#SD1/eMMC1######UART\
 0#UART 0###LPD_I2C0#LPD_I2C0####SD1/eMMC1#Gem0#Gem0#Gem0#Gem0#Gem0#Gem0#Gem0#Gem0#Gem0#Gem0#Gem0#Gem0#SPI 0#SPI 0#SPI 0#SPI 0#SPI 0#SPI 0#######Gem0#Gem0} \
-      PMC_MIO_TREE_SIGNALS {#############usb2phy_reset#ulpi_tx_data[0]#ulpi_tx_data[1]#ulpi_tx_data[2]#ulpi_tx_data[3]#ulpi_clk#ulpi_tx_data[4]#ulpi_tx_data[5]#ulpi_tx_data[6]#ulpi_tx_data[7]#ulpi_dir#ulpi_stp#ulpi_nxt#clk#dir1/data[7]##cmd#data[0]#data[1]#data[2]#data[3]#sel/data[4]#dir_cmd/data[5]#dir0/data[6]######rxd#txd###scl#sda####buspwr/rst#rgmii_tx_clk#rgmii_txd[0]#rgmii_txd[1]#rgmii_txd[2]#rgmii_txd[3]#rgmii_tx_ctl#rgmii_rx_clk#rgmii_rxd[0]#rgmii_rxd[1]#rgmii_rxd[2]#rgmii_rxd[3]#rgmii_rx_ctl#sclk#n_ss[2]#n_ss[1]#n_ss[0]#miso#mosi#######gem0_mdc#gem0_mdio}\
+      PMC_MIO_TREE_SIGNALS {qspi0_clk#qspi0_io[1]#qspi0_io[2]#qspi0_io[3]#qspi0_io[0]#qspi0_cs_b##qspi1_cs_b#qspi1_io[0]#qspi1_io[1]#qspi1_io[2]#qspi1_io[3]#qspi1_clk#usb2phy_reset#ulpi_tx_data[0]#ulpi_tx_data[1]#ulpi_tx_data[2]#ulpi_tx_data[3]#ulpi_clk#ulpi_tx_data[4]#ulpi_tx_data[5]#ulpi_tx_data[6]#ulpi_tx_data[7]#ulpi_dir#ulpi_stp#ulpi_nxt#clk#dir1/data[7]##cmd#data[0]#data[1]#data[2]#data[3]#sel/data[4]#dir_cmd/data[5]#dir0/data[6]######rxd#txd###scl#sda####buspwr/rst#rgmii_tx_clk#rgmii_txd[0]#rgmii_txd[1]#rgmii_txd[2]#rgmii_txd[3]#rgmii_tx_ctl#rgmii_rx_clk#rgmii_rxd[0]#rgmii_rxd[1]#rgmii_rxd[2]#rgmii_rxd[3]#rgmii_rx_ctl#sclk#n_ss[2]#n_ss[1]#n_ss[0]#miso#mosi#######gem0_mdc#gem0_mdio}\
 \
       PMC_NOC_PMC_ADDR_WIDTH {64} \
       PMC_NOC_PMC_DATA_WIDTH {128} \
@@ -603,10 +711,10 @@ proc create_root_design { parentCell } {
       PMC_PMC_NOC_DATA_WIDTH {128} \
       PMC_QSPI_BAUD_RATE_DIV {8} \
       PMC_QSPI_COHERENCY {0} \
-      PMC_QSPI_FBCLK {{ENABLE 1} {IO {PMC_MIO 6}}} \
-      PMC_QSPI_PERIPHERAL_DATA_MODE {x1} \
-      PMC_QSPI_PERIPHERAL_ENABLE {0} \
-      PMC_QSPI_PERIPHERAL_MODE {Single} \
+      PMC_QSPI_FBCLK {{ENABLE 0} {IO {PMC_MIO 6}}} \
+      PMC_QSPI_PERIPHERAL_DATA_MODE {x4} \
+      PMC_QSPI_PERIPHERAL_ENABLE {1} \
+      PMC_QSPI_PERIPHERAL_MODE {Dual Parallel} \
       PMC_QSPI_ROUTE_THROUGH_FPD {0} \
       PMC_RAM_CFU_REF_CTRL_CSCAN_ACT_FREQMHZ {100} \
       PMC_RAM_CFU_REF_CTRL_CSCAN_DIVISOR0 {3} \
@@ -2031,13 +2139,13 @@ proc create_root_design { parentCell } {
   # Create instance: smartconnect_0, and set properties
   set smartconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:smartconnect:1.0 smartconnect_0 ]
   set_property -dict [list \
-    CONFIG.NUM_MI {4} \
+    CONFIG.NUM_MI {5} \
     CONFIG.NUM_SI {1} \
   ] $smartconnect_0
 
 
-  # Create instance: Serdes
-  create_hier_cell_Serdes [current_bd_instance .] Serdes
+  # Create instance: Serdes1
+  create_hier_cell_Serdes1 [current_bd_instance .] Serdes1
 
   # Create instance: axi_gpio_0, and set properties
   set axi_gpio_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_0 ]
@@ -2052,7 +2160,11 @@ proc create_root_design { parentCell } {
   ] $axi_uartlite_0
 
 
+  # Create instance: Serdes2
+  create_hier_cell_Serdes2 [current_bd_instance .] Serdes2
+
   # Create interface connections
+  connect_bd_intf_net -intf_net Bank106_GT_REFCLK_0_1 [get_bd_intf_ports Bank200_GT_REFCLK] [get_bd_intf_pins Serdes2/Bank106_GT_REFCLK]
   connect_bd_intf_net -intf_net CIPS_0_FPD_AXI_NOC_0 [get_bd_intf_pins CIPS_0/FPD_AXI_NOC_0] [get_bd_intf_pins cips_noc/S04_AXI]
   connect_bd_intf_net -intf_net CIPS_0_FPD_AXI_NOC_1 [get_bd_intf_pins CIPS_0/FPD_AXI_NOC_1] [get_bd_intf_pins cips_noc/S05_AXI]
   connect_bd_intf_net -intf_net CIPS_0_FPD_CCI_NOC_0 [get_bd_intf_pins CIPS_0/FPD_CCI_NOC_0] [get_bd_intf_pins cips_noc/S00_AXI]
@@ -2062,8 +2174,9 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net CIPS_0_LPD_AXI_NOC_0 [get_bd_intf_pins CIPS_0/LPD_AXI_NOC_0] [get_bd_intf_pins cips_noc/S06_AXI]
   connect_bd_intf_net -intf_net CIPS_0_M_AXI_FPD [get_bd_intf_pins CIPS_0/M_AXI_FPD] [get_bd_intf_pins smartconnect_0/S00_AXI]
   connect_bd_intf_net -intf_net CIPS_0_PMC_NOC_AXI_0 [get_bd_intf_pins CIPS_0/PMC_NOC_AXI_0] [get_bd_intf_pins cips_noc/S07_AXI]
-  connect_bd_intf_net -intf_net CLK_IN_D_0_1 [get_bd_intf_ports Bank106_GT_REFCLK] [get_bd_intf_pins Serdes/Bank106_GT_REFCLK]
-  connect_bd_intf_net -intf_net Serdes_GT_Serial_0 [get_bd_intf_ports bank106_GT_Serial] [get_bd_intf_pins Serdes/bank106_GT_Serial]
+  connect_bd_intf_net -intf_net CLK_IN_D_0_1 [get_bd_intf_ports Bank106_GT_REFCLK] [get_bd_intf_pins Serdes1/Bank_GTY_REFCLK]
+  connect_bd_intf_net -intf_net Serdes2_bank106_GT_Serial [get_bd_intf_ports bank200_GT_Serial] [get_bd_intf_pins Serdes2/bank106_GT_Serial]
+  connect_bd_intf_net -intf_net Serdes_GT_Serial_0 [get_bd_intf_ports bank106_GT_Serial] [get_bd_intf_pins Serdes1/bank_GTY_Serial]
   connect_bd_intf_net -intf_net axi_gpio_0_GPIO [get_bd_intf_ports PL_GPIO] [get_bd_intf_pins axi_gpio_0/GPIO]
   connect_bd_intf_net -intf_net axi_uartlite_0_UART [get_bd_intf_ports PL_UART] [get_bd_intf_pins axi_uartlite_0/UART]
   connect_bd_intf_net -intf_net cips_noc_M00_INI [get_bd_intf_pins cips_noc/M00_INI] [get_bd_intf_pins sys_noc_lpddr4/S00_INI]
@@ -2075,9 +2188,10 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net noc_lpddr4_CH1_LPDDR4_0 [get_bd_intf_ports TRIP2_CH1_LPDDR4] [get_bd_intf_pins noc_lpddr4/CH1_LPDDR4_0]
   connect_bd_intf_net -intf_net noc_lpddr4_CH1_LPDDR4_1 [get_bd_intf_ports TRIP3_CH1_LPDDR4] [get_bd_intf_pins noc_lpddr4/CH1_LPDDR4_1]
   connect_bd_intf_net -intf_net smartconnect_0_M00_AXI [get_bd_intf_pins smartconnect_0/M00_AXI] [get_bd_intf_pins axi_intc_0/s_axi]
-  connect_bd_intf_net -intf_net smartconnect_0_M01_AXI [get_bd_intf_pins smartconnect_0/M01_AXI] [get_bd_intf_pins Serdes/AXI_LITE]
+  connect_bd_intf_net -intf_net smartconnect_0_M01_AXI [get_bd_intf_pins smartconnect_0/M01_AXI] [get_bd_intf_pins Serdes1/AXI_LITE]
   connect_bd_intf_net -intf_net smartconnect_0_M02_AXI [get_bd_intf_pins smartconnect_0/M02_AXI] [get_bd_intf_pins axi_gpio_0/S_AXI]
   connect_bd_intf_net -intf_net smartconnect_0_M03_AXI [get_bd_intf_pins smartconnect_0/M03_AXI] [get_bd_intf_pins axi_uartlite_0/S_AXI]
+  connect_bd_intf_net -intf_net smartconnect_0_M04_AXI [get_bd_intf_pins smartconnect_0/M04_AXI] [get_bd_intf_pins Serdes2/AXI_LITE]
   connect_bd_intf_net -intf_net sys_clk0_0_1 [get_bd_intf_ports LPDDR4_CLK1] [get_bd_intf_pins sys_noc_lpddr4/sys_clk0]
   connect_bd_intf_net -intf_net sys_clk0_1_1 [get_bd_intf_ports LPDDR4_CLK2] [get_bd_intf_pins noc_lpddr4/sys_clk0]
   connect_bd_intf_net -intf_net sys_clk1_0_1 [get_bd_intf_ports LPDDR4_CLK3] [get_bd_intf_pins noc_lpddr4/sys_clk1]
@@ -2109,14 +2223,15 @@ proc create_root_design { parentCell } {
   connect_bd_net -net axi_uartlite_0_interrupt  [get_bd_pins axi_uartlite_0/interrupt] \
   [get_bd_pins axi_intc_0/intr]
   connect_bd_net -net clk_wizard_0_clk_out1  [get_bd_pins clk_wizard_0/clk_out1] \
-  [get_bd_pins Serdes/s_axi_lite_clk] \
+  [get_bd_pins Serdes1/s_axi_lite_clk] \
   [get_bd_pins CIPS_0/m_axi_fpd_aclk] \
   [get_bd_pins axi_gpio_0/s_axi_aclk] \
   [get_bd_pins axi_intc_0/s_axi_aclk] \
   [get_bd_pins axi_uartlite_0/s_axi_aclk] \
   [get_bd_pins cips_noc/aclk0] \
   [get_bd_pins proc_sys_reset_0/slowest_sync_clk] \
-  [get_bd_pins smartconnect_0/aclk]
+  [get_bd_pins smartconnect_0/aclk] \
+  [get_bd_pins Serdes2/s_axi_lite_clk]
   connect_bd_net -net clk_wizard_0_locked  [get_bd_pins clk_wizard_0/locked] \
   [get_bd_pins proc_sys_reset_0/dcm_locked]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn  [get_bd_pins proc_sys_reset_0/peripheral_aresetn] \
@@ -2150,7 +2265,8 @@ proc create_root_design { parentCell } {
   assign_bd_address -offset 0xA4010000 -range 0x00010000 -target_address_space [get_bd_addr_spaces CIPS_0/M_AXI_FPD] [get_bd_addr_segs axi_gpio_0/S_AXI/Reg] -force
   assign_bd_address -offset 0xA4000000 -range 0x00010000 -target_address_space [get_bd_addr_spaces CIPS_0/M_AXI_FPD] [get_bd_addr_segs axi_intc_0/S_AXI/Reg] -force
   assign_bd_address -offset 0xA4020000 -range 0x00010000 -target_address_space [get_bd_addr_spaces CIPS_0/M_AXI_FPD] [get_bd_addr_segs axi_uartlite_0/S_AXI/Reg] -force
-  assign_bd_address -offset 0xA4040000 -range 0x00040000 -target_address_space [get_bd_addr_spaces CIPS_0/M_AXI_FPD] [get_bd_addr_segs Serdes/gt_quad_base_0/AXI_LITE/Reg] -force
+  assign_bd_address -offset 0xA4040000 -range 0x00040000 -target_address_space [get_bd_addr_spaces CIPS_0/M_AXI_FPD] [get_bd_addr_segs Serdes1/gt_quad_base_0/AXI_LITE/Reg] -force
+  assign_bd_address -offset 0xA4080000 -range 0x00040000 -with_name SEG_gt_quad_base_0_Reg_1 -target_address_space [get_bd_addr_spaces CIPS_0/M_AXI_FPD] [get_bd_addr_segs Serdes2/gt_quad_base_0/AXI_LITE/Reg] -force
   assign_bd_address -offset 0x050000000000 -range 0x000200000000 -target_address_space [get_bd_addr_spaces CIPS_0/PMC_NOC_AXI_0] [get_bd_addr_segs noc_lpddr4/S00_INI/C0_DDR_CH1x2] -force
   assign_bd_address -offset 0x060100000000 -range 0x000200000000 -target_address_space [get_bd_addr_spaces CIPS_0/PMC_NOC_AXI_0] [get_bd_addr_segs noc_lpddr4/S00_INI/C0_DDR_CH2x2] -force
   assign_bd_address -offset 0x000800000000 -range 0x000200000000 -target_address_space [get_bd_addr_spaces CIPS_0/PMC_NOC_AXI_0] [get_bd_addr_segs sys_noc_lpddr4/S00_INI/C0_DDR_LOW1] -force
